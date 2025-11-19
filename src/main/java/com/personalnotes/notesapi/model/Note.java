@@ -8,7 +8,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Entity
-@Data // De Lombok: genera getters, setters, toString, equals y hashCode
+@Data 
 public class Note {
 
     @Id
@@ -19,6 +19,5 @@ public class Note {
     
     private String content;
 
-    // Opcional: Para registrar el momento de creacion
     private LocalDateTime createdAt = LocalDateTime.now(); 
 }

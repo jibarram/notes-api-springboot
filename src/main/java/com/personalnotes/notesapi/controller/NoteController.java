@@ -1,5 +1,6 @@
 package com.personalnotes.notesapi.controller;
 
+import com.personalnotes.notesapi.exception.ResourceNotFoundException;
 import com.personalnotes.notesapi.model.Note;
 import com.personalnotes.notesapi.service.NoteService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +11,6 @@ import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-// Indicamos que esta clase es un Controller REST y la URL base
 @RestController
 @RequestMapping("/api/notes") 
 public class NoteController {
@@ -36,14 +36,14 @@ public class NoteController {
     @Operation(summary = "Obtener nota mediante ID", description = "Recupera una nota almacenada.")
     public ResponseEntity<Note> getNoteById(@PathVariable Long id) {
         return noteService.findNoteById(id)
-            .map(note -> ResponseEntity.ok(note)) // 200 OK si existe
-            .orElseGet(() -> ResponseEntity.notFound().build()); // 404 NOT FOUND si no existe
+            .map(note -> ResponseEntity.ok(note))
+            .orElseThrow(() -> new ResourceNotFoundException("Note not found with id: " + id));
     }
 
     // 3. CREATE NEW NOTE (CREATE)
     // POST http://localhost:8080/api/notes
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED) // Retorna 201 CREATED
+    @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Crea una nota", description = "Crea una nueva nota con los datos ingresados.")
     public Note createNote(@RequestBody Note note) {
         return noteService.saveNote(note);
@@ -53,18 +53,14 @@ public class NoteController {
     // PUT http://localhost:8080/api/notes/{id}
     @PutMapping("/{id}")
     @Operation(summary = "Actualiza una nota", description = "Actualiza los datos de una nota ingresada.")
-    public ResponseEntity<Note> updateNote(@PathVariable Long id, @RequestBody Note noteDetails) {
-        return noteService.findNoteById(id)
-            .map(existingNote -> {
-                // Actualizamos los campos
-                existingNote.setTitle(noteDetails.getTitle());
-                existingNote.setContent(noteDetails.getContent());
-                
-                // Guardamos la nota actualizada (save tambien funciona para update)
-                Note updatedNote = noteService.saveNote(existingNote);
-                return ResponseEntity.ok(updatedNote);
-            })
-            .orElseGet(() -> ResponseEntity.notFound().build()); // 404 si no existe
+    public Note updateNote(@PathVariable Long id, @RequestBody Note noteDetails) {
+        Note existingNote = noteService.findNoteById(id)
+        .orElseThrow(() -> new ResourceNotFoundException("Note not found with id: " + id));
+    
+        existingNote.setTitle(noteDetails.getTitle());
+        existingNote.setContent(noteDetails.getContent());
+        
+        return noteService.saveNote(existingNote);
     }
 
     // 5. DELETE NOTE (DELETE)
@@ -72,11 +68,10 @@ public class NoteController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar nota", description = "Elimina una nota almacenada.")
     public ResponseEntity<?> deleteNote(@PathVariable Long id) {
-        // En una implementacion mas completa, se validaria primero si existe
-        if (noteService.findNoteById(id).isEmpty()) {
-            return ResponseEntity.notFound().build(); // 404 si no existe
-        }
+        noteService.findNoteById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Note not found with id: " + id));
+        
         noteService.deleteNote(id);
-        return ResponseEntity.noContent().build(); // 204 NO CONTENT si el borrado fue exitoso
+        return ResponseEntity.noContent().build();
     }
 }
